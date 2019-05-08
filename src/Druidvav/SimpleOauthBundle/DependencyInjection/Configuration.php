@@ -5,12 +5,11 @@ namespace Druidvav\SimpleOauthBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
-use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 class Configuration implements ConfigurationInterface
 {
     /**
-     * @return \Symfony\Component\Config\Definition\Builder\TreeBuilder The tree builder
+     * @return TreeBuilder The tree builder
      */
     public function getConfigTreeBuilder()
     {
@@ -26,7 +25,6 @@ class Configuration implements ConfigurationInterface
             ->append($this->addServicesSection())
         ;
 
-        $this->addHttpClientConfiguration($rootNode);
         return $treeBuilder;
     }
 
@@ -57,20 +55,5 @@ class Configuration implements ConfigurationInterface
             ->end()
         ->end();
         return $node;
-    }
-
-    private function addHttpClientConfiguration(ArrayNodeDefinition $node)
-    {
-        $node
-            ->children()
-                ->arrayNode('http')
-                    ->addDefaultsIfNotSet()
-                    ->children()
-                        ->scalarNode('client')->defaultValue('httplug.client.default')->end()
-                        ->scalarNode('message_factory')->defaultValue('httplug.message_factory.default')->end()
-                    ->end()
-                ->end()
-            ->end()
-        ;
     }
 }

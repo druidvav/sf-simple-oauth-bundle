@@ -1,25 +1,22 @@
 <?php
-
-/*
- * This file is part of the HWIOAuthBundle package.
- *
- * (c) Hardware.Info <opensource@hardware.info>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+/** @noinspection PhpUnusedParameterInspection */
+/** @noinspection PhpDocSignatureInspection */
 
 namespace Druidvav\SimpleOauthBundle\OAuth\ResourceOwner;
 
-use Http\Client\Common\HttpMethodsClient;
-use Http\Client\Exception;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Psr7\Request;
 use Druidvav\SimpleOauthBundle\OAuth\Exception\HttpTransportException;
 use Druidvav\SimpleOauthBundle\OAuth\RequestDataStorageInterface;
 use Druidvav\SimpleOauthBundle\OAuth\ResourceOwnerInterface;
 use Druidvav\SimpleOauthBundle\OAuth\Response\PathUserResponse;
 use Druidvav\SimpleOauthBundle\OAuth\Response\UserResponseInterface;
+use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\HttpFoundation\Request as HttpRequest;
+use Symfony\Component\OptionsResolver\Exception\AccessException;
+use Symfony\Component\OptionsResolver\Exception\UndefinedOptionsException;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Http\HttpUtils;
@@ -45,9 +42,9 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
     protected $paths = [];
 
     /**
-     * @var HttpMethodsClient
+     * @var Client
      */
-    protected $httpClient;
+    protected $guzzle;
 
     /**
      * @var HttpUtils
@@ -70,20 +67,20 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
     protected $storage;
 
     /**
-     * @param HttpMethodsClient           $httpClient Httplug client
+     * @param Client                      $guzzle Guzzle client
      * @param HttpUtils                   $httpUtils  Http utils
      * @param array                       $options    Options for the resource owner
      * @param string                      $name       Name for the resource owner
      * @param RequestDataStorageInterface $storage    Request token storage
      */
     public function __construct(
-        HttpMethodsClient $httpClient,
+        Client $guzzle,
         HttpUtils $httpUtils,
         array $options,
         $name,
         RequestDataStorageInterface $storage
     ) {
-        $this->httpClient = $httpClient;
+        $this->guzzle = $guzzle;
         $this->httpUtils = $httpUtils;
         $this->name = $name;
         $this->storage = $storage;
@@ -136,7 +133,7 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
     public function getOption($name)
     {
         if (!array_key_exists($name, $this->options)) {
-            throw new \InvalidArgumentException(sprintf('Unknown option "%s"', $name));
+            throw new InvalidArgumentException(sprintf('Unknown option "%s"', $name));
         }
 
         return $this->options[$name];
@@ -256,13 +253,8 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
         }
 
         try {
-            return $this->httpClient->send(
-                $method,
-                $url,
-                $headers,
-                $content
-            );
-        } catch (Exception $e) {
+            return $this->guzzle->send(new Request($method, $url, $headers, $content));
+        } catch (GuzzleException $e) {
             throw new HttpTransportException('Error while sending HTTP request', $this->getName(), $e->getCode(), $e);
         }
     }
@@ -325,8 +317,8 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
      *
      * @param OptionsResolver $resolver
      *
-     * @throws \Symfony\Component\OptionsResolver\Exception\AccessException
-     * @throws \Symfony\Component\OptionsResolver\Exception\UndefinedOptionsException
+     * @throws AccessException
+     * @throws UndefinedOptionsException
      */
     protected function configureOptions(OptionsResolver $resolver)
     {

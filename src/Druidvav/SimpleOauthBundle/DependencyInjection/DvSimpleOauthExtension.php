@@ -2,14 +2,10 @@
 
 namespace Druidvav\SimpleOauthBundle\DependencyInjection;
 
-use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
-use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\Config\FileLocator;
-use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 
 class DvSimpleOauthExtension extends Extension
 {
@@ -23,30 +19,19 @@ class DvSimpleOauthExtension extends Extension
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $this->createHttplugClient($container, $config);
         $this->enableServices($config['services'], $config, $container);
 
-        $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
-        $loader->load('services.yml');
-    }
+        $definition = new Definition('GuzzleHttp\\Client');
+        $definition->addArgument([ 'timeout' => 10 ]);
+        $container->setDefinition('dv.oauth.guzzle', $definition);
 
-    protected function createHttplugClient(ContainerBuilder $container, array $config)
-    {
-        $httpClientId = $config['http']['client'];
-        $httpMessageFactoryId = $config['http']['message_factory'];
-        $bundles = $container->getParameter('kernel.bundles');
-        if ('httplug.client.default' === $httpClientId && !isset($bundles['HttplugBundle'])) {
-            throw new InvalidConfigurationException(
-                'You must setup php-http/httplug-bundle to use the default http client service.'
-            );
-        }
-        if ('httplug.message_factory.default' === $httpMessageFactoryId && !isset($bundles['HttplugBundle'])) {
-            throw new InvalidConfigurationException(
-                'You must setup php-http/httplug-bundle to use the default http message factory service.'
-            );
-        }
-        $container->setAlias('dv.oauth.http.client', new Alias($config['http']['client'], true));
-        $container->setAlias('dv.oauth.http.message_factory', new Alias($config['http']['message_factory'], true));
+        $definition = new Definition('Druidvav\SimpleOauthBundle\Service\OAuthService');
+        $definition->addMethodCall('setContainer', [ new Reference('service_container') ]);
+        $container->setDefinition('dv.oauth', $definition);
+
+        $definition = new Definition('Druidvav\SimpleOauthBundle\OAuth\RequestDataStorage\SessionStorage');
+        $definition->addArgument(new Reference('session'));
+        $container->setDefinition('dv.oauth.storage.session', $definition);
     }
 
     private function enableServices($config, $globalConfig, ContainerBuilder $container)
@@ -55,7 +40,7 @@ class DvSimpleOauthExtension extends Extension
             $className = 'Druidvav\\SimpleOauthBundle\\OAuth\\ResourceOwner\\' . ucfirst($serviceConfig['resource_owner']) . 'ResourceOwner';
 
             $definition = new Definition($className);
-            $definition->addArgument(new Reference('dv.oauth.http_client'));
+            $definition->addArgument(new Reference('dv.oauth.guzzle'));
             $definition->addArgument(new Reference('security.http_utils'));
             $definition->addArgument($serviceConfig['options']);
             $definition->addArgument($serviceConfig['resource_owner']);
