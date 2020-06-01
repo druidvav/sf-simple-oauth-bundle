@@ -80,7 +80,7 @@ class VkontakteResourceOwner extends GenericOAuth2ResourceOwner
         $resolver->setDefaults(array(
             'authorization_url' => 'https://oauth.vk.com/authorize',
             'access_token_url' => 'https://oauth.vk.com/access_token',
-            'infos_url' => 'https://api.vk.com/method/users.get?v=5.8',
+            'infos_url' => 'https://api.vk.com/method/users.get?v=5.21',
 
             'scope' => 'email',
 
