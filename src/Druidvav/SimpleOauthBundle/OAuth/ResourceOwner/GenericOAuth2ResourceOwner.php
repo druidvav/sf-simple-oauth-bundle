@@ -3,7 +3,7 @@
 /*
  * This file is part of the HWIOAuthBundle package.
  *
- * (c) Hardware.Info <opensource@hardware.info>
+ * (c) Hardware Info <opensource@hardware.info>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -12,6 +12,7 @@
 namespace Druidvav\SimpleOauthBundle\OAuth\ResourceOwner;
 
 use Druidvav\SimpleOauthBundle\OAuth\OAuthToken;
+use Druidvav\SimpleOauthBundle\Security\Helper\NonceGenerator;
 use Druidvav\SimpleOauthBundle\Security\OAuthErrorHandler;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\HttpFoundation\Request as HttpRequest;
@@ -28,19 +29,19 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
     /**
      * {@inheritdoc}
      */
-    public function getUserInformation(array $accessToken, array $extraParameters = array())
+    public function getUserInformation(array $accessToken, array $extraParameters = [])
     {
         if ($this->options['use_bearer_authorization']) {
             $content = $this->httpRequest(
                 $this->normalizeUrl($this->options['infos_url'], $extraParameters),
                 null,
-                array('Authorization' => 'Bearer '.$accessToken['access_token'])
+                ['Authorization' => 'Bearer '.$accessToken['access_token']]
             );
         } else {
             $content = $this->doGetUserInformationRequest(
                 $this->normalizeUrl(
                     $this->options['infos_url'],
-                    array_merge(array($this->options['attr_name'] => $accessToken['access_token']), $extraParameters)
+                    array_merge([$this->options['attr_name'] => $accessToken['access_token']], $extraParameters)
                 )
             );
         }
@@ -56,23 +57,19 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
     /**
      * {@inheritdoc}
      */
-    public function getAuthorizationUrl($redirectUri, array $extraParameters = array())
+    public function getAuthorizationUrl($redirectUri, array $extraParameters = [])
     {
         if ($this->options['csrf']) {
-            if (null === $this->state) {
-                $this->state = $this->generateNonce();
-            }
-
-            $this->storage->save($this, $this->state, 'csrf_state');
+            $this->handleCsrfToken();
         }
 
-        $parameters = array_merge(array(
+        $parameters = array_merge([
             'response_type' => 'code',
             'client_id' => $this->options['client_id'],
             'scope' => $this->options['scope'],
-            'state' => $this->state ? urlencode($this->state) : null,
+            'state' => $this->state->encode(),
             'redirect_uri' => $redirectUri,
-        ), $extraParameters);
+        ], $extraParameters);
 
         return $this->normalizeUrl($this->options['authorization_url'], $parameters);
     }
@@ -80,17 +77,15 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
     /**
      * {@inheritdoc}
      */
-    public function getAccessToken(HttpRequest $request, $redirectUri, array $extraParameters = array())
+    public function getAccessToken(HttpRequest $request, $redirectUri, array $extraParameters = [])
     {
         OAuthErrorHandler::handleOAuthError($request);
 
-        $parameters = array_merge(array(
+        $parameters = array_merge([
             'code' => $request->query->get('code'),
             'grant_type' => 'authorization_code',
-            'client_id' => $this->options['client_id'],
-            'client_secret' => $this->options['client_secret'],
             'redirect_uri' => $redirectUri,
-        ), $extraParameters);
+        ], $extraParameters);
 
         $response = $this->doGetTokenRequest($this->options['access_token_url'], $parameters);
         $response = $this->getResponseContent($response);
@@ -103,14 +98,12 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
     /**
      * {@inheritdoc}
      */
-    public function refreshAccessToken($refreshToken, array $extraParameters = array())
+    public function refreshAccessToken($refreshToken, array $extraParameters = [])
     {
-        $parameters = array_merge(array(
+        $parameters = array_merge([
             'refresh_token' => $refreshToken,
             'grant_type' => 'refresh_token',
-            'client_id' => $this->options['client_id'],
-            'client_secret' => $this->options['client_secret'],
-        ), $extraParameters);
+        ], $extraParameters);
 
         $response = $this->doGetTokenRequest($this->options['access_token_url'], $parameters);
         $response = $this->getResponseContent($response);
@@ -134,7 +127,7 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
             'client_secret' => $this->options['client_secret'],
         ];
 
-        $response = $this->httpRequest($this->normalizeUrl($this->options['revoke_token_url'], array('token' => $token)), $parameters, array(), 'DELETE');
+        $response = $this->httpRequest($this->normalizeUrl($this->options['revoke_token_url'], ['token' => $token]), $parameters, [], 'DELETE');
 
         return 200 === $response->getStatusCode();
     }
@@ -158,7 +151,8 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
         }
 
         try {
-            return null !== $this->storage->fetch($this, urldecode($csrfToken), 'csrf_state');
+            return null !== $csrfToken
+                && null !== $this->storage->fetch($this, urldecode($csrfToken), 'csrf_state');
         } catch (\InvalidArgumentException $e) {
             throw new AuthenticationException('Given CSRF token is not valid.');
         }
@@ -167,15 +161,25 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
     /**
      * {@inheritdoc}
      */
-    protected function doGetTokenRequest($url, array $parameters = array())
+    protected function doGetTokenRequest($url, array $parameters = [])
     {
-        return $this->httpRequest($url, http_build_query($parameters, '', '&'));
+        $headers = [];
+        if ($this->options['use_authorization_to_get_token']) {
+            if ($this->options['client_secret']) {
+                $headers['Authorization'] = 'Basic '.base64_encode($this->options['client_id'].':'.$this->options['client_secret']);
+            }
+        } else {
+            $parameters['client_id'] = $this->options['client_id'];
+            $parameters['client_secret'] = $this->options['client_secret'];
+        }
+
+        return $this->httpRequest($url, http_build_query($parameters, '', '&'), $headers);
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function doGetUserInformationRequest($url, array $parameters = array())
+    protected function doGetUserInformationRequest($url, array $parameters = [])
     {
         return $this->httpRequest($url, http_build_query($parameters, '', '&'));
     }
@@ -192,7 +196,7 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
         }
 
         if (isset($response['error'])) {
-            throw new AuthenticationException(sprintf('OAuth error: "%s"', isset($response['error']['message']) ? $response['error']['message'] : $response['error']));
+            throw new AuthenticationException(sprintf('OAuth error: "%s"', $response['error']['message'] ?? $response['error']));
         }
 
         if (!isset($response['access_token'])) {
@@ -211,6 +215,7 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
             'attr_name' => 'access_token',
             'use_commas_in_scope' => false,
             'use_bearer_authorization' => true,
+            'use_authorization_to_get_token' => true,
         ]);
 
         $resolver->setDefined('revoke_token_url');
@@ -237,8 +242,17 @@ class GenericOAuth2ResourceOwner extends AbstractResourceOwner
      */
     protected function httpRequest($url, $content = null, array $headers = [], $method = null)
     {
-        $headers += array('Content-Type' => 'application/x-www-form-urlencoded');
+        $headers += ['Content-Type' => 'application/x-www-form-urlencoded'];
 
         return parent::httpRequest($url, $content, $headers, $method);
+    }
+
+    private function handleCsrfToken(): void
+    {
+        if (null === $this->state->getCsrfToken()) {
+            $this->state->setCsrfToken(NonceGenerator::generate());
+        }
+
+        $this->storage->save($this, $this->state->getCsrfToken(), 'csrf_state');
     }
 }

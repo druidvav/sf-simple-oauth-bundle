@@ -1,6 +1,13 @@
 <?php
-/** @noinspection PhpUnusedParameterInspection */
-/** @noinspection PhpDocSignatureInspection */
+
+/*
+ * This file is part of the HWIOAuthBundle package.
+ *
+ * (c) Hardware Info <opensource@hardware.info>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Druidvav\SimpleOauthBundle\OAuth\ResourceOwner;
 
@@ -12,11 +19,10 @@ use Druidvav\SimpleOauthBundle\OAuth\RequestDataStorageInterface;
 use Druidvav\SimpleOauthBundle\OAuth\ResourceOwnerInterface;
 use Druidvav\SimpleOauthBundle\OAuth\Response\PathUserResponse;
 use Druidvav\SimpleOauthBundle\OAuth\Response\UserResponseInterface;
-use InvalidArgumentException;
+use Druidvav\SimpleOauthBundle\OAuth\State\State;
+use Druidvav\SimpleOauthBundle\OAuth\StateInterface;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\HttpFoundation\Request as HttpRequest;
-use Symfony\Component\OptionsResolver\Exception\AccessException;
-use Symfony\Component\OptionsResolver\Exception\UndefinedOptionsException;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Http\HttpUtils;
@@ -57,7 +63,7 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
     protected $name;
 
     /**
-     * @var string
+     * @var StateInterface
      */
     protected $state;
 
@@ -65,6 +71,11 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
      * @var RequestDataStorageInterface
      */
     protected $storage;
+
+    /**
+     * @var bool
+     */
+    private $stateLoaded = false;
 
     /**
      * @param Client                      $guzzle Guzzle client
@@ -77,7 +88,7 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
         Client $guzzle,
         HttpUtils $httpUtils,
         array $options,
-        $name,
+        string $name,
         RequestDataStorageInterface $storage
     ) {
         $this->guzzle = $guzzle;
@@ -100,6 +111,8 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
         $resolver = new OptionsResolver();
         $this->configureOptions($resolver);
         $this->options = $resolver->resolve($options);
+
+        $this->state = new State($this->options['state'] ?: null);
 
         $this->configure();
     }
@@ -132,8 +145,8 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
      */
     public function getOption($name)
     {
-        if (!array_key_exists($name, $this->options)) {
-            throw new InvalidArgumentException(sprintf('Unknown option "%s"', $name));
+        if (!\array_key_exists($name, $this->options)) {
+            throw new \InvalidArgumentException(sprintf('Unknown option "%s"', $name));
         }
 
         return $this->options[$name];
@@ -145,6 +158,53 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
     public function addPaths(array $paths)
     {
         $this->paths = array_merge($this->paths, $paths);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getState(): StateInterface
+    {
+        if ($this->stateLoaded) {
+            return $this->state;
+        }
+
+        // lazy-loading for stored states
+        try {
+            $storedData = $this->storage->fetch($this, State::class, 'state');
+        } catch (\Throwable $e) {
+            $storedData = null;
+        }
+        if (null !== $storedData && false !== $storedState = unserialize($storedData)) {
+            foreach ($storedState->getAll() as $key => $value) {
+                $this->addStateParameter($key, $value);
+            }
+        }
+        $this->stateLoaded = true;
+
+        return $this->state;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function addStateParameter(string $key, string $value): void
+    {
+        if (!$this->state->has($key)) {
+            $this->state->add($key, $value);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function storeState(StateInterface $state = null): void
+    {
+        if (null === $state || 0 === \count($state->getAll())) {
+            return;
+        }
+
+        $this->storage->save($this, $state, 'state');
     }
 
     /**
@@ -245,10 +305,12 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
             $method = null === $content || '' === $content ? 'GET' : 'POST';
         }
 
-        $headers += array('User-Agent' => 'HWIOAuthBundle (https://github.com/hwi/HWIOAuthBundle)');
-        if (is_string($content)) {
-            $headers += array('Content-Length' => strlen($content));
-        } elseif (is_array($content)) {
+        $headers += ['User-Agent' => 'HWIOAuthBundle (https://github.com/hwi/HWIOAuthBundle)'];
+        if (\is_string($content)) {
+            if (!isset($headers['Content-Length'])) {
+                $headers += ['Content-Length' => (string) \strlen($content)];
+            }
+        } elseif (\is_array($content)) {
             $content = http_build_query($content, '', '&');
         }
 
@@ -271,7 +333,7 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
         // First check that content in response exists, due too bug: https://bugs.php.net/bug.php?id=54484
         $content = (string) $rawResponse->getBody();
         if (!$content) {
-            return array();
+            return [];
         }
 
         $response = json_decode($content, true);
@@ -280,16 +342,6 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
         }
 
         return $response;
-    }
-
-    /**
-     * Generate a non-guessable nonce value.
-     *
-     * @return string
-     */
-    protected function generateNonce()
-    {
-        return md5(microtime(true).uniqid('', true));
     }
 
     /**
@@ -317,8 +369,8 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
      *
      * @param OptionsResolver $resolver
      *
-     * @throws AccessException
-     * @throws UndefinedOptionsException
+     * @throws \Symfony\Component\OptionsResolver\Exception\AccessException
+     * @throws \Symfony\Component\OptionsResolver\Exception\UndefinedOptionsException
      */
     protected function configureOptions(OptionsResolver $resolver)
     {
@@ -332,6 +384,7 @@ abstract class AbstractResourceOwner implements ResourceOwnerInterface
 
         $resolver->setDefaults([
             'scope' => null,
+            'state' => null,
             'csrf' => false,
             'user_response_class' => PathUserResponse::class,
             'auth_with_one_url' => false,

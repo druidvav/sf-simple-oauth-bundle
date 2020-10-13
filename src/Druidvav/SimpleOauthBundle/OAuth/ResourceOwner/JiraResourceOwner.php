@@ -3,7 +3,7 @@
 /*
  * This file is part of the HWIOAuthBundle package.
  *
- * (c) Hardware.Info <opensource@hardware.info>
+ * (c) Hardware Info <opensource@hardware.info>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -12,6 +12,7 @@
 namespace Druidvav\SimpleOauthBundle\OAuth\ResourceOwner;
 
 use Druidvav\SimpleOauthBundle\OAuth\OAuthToken;
+use Druidvav\SimpleOauthBundle\Security\Helper\NonceGenerator;
 use Druidvav\SimpleOauthBundle\Security\OAuthUtils;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\OptionsResolver\Options;
@@ -27,27 +28,27 @@ class JiraResourceOwner extends GenericOAuth1ResourceOwner
     /**
      * {@inheritdoc}
      */
-    protected $paths = array(
+    protected $paths = [
         'identifier' => 'name',
         'nickname' => 'name',
         'realname' => 'displayName',
         'email' => 'emailAddress',
         'profilepicture' => 'avatarUrls.48x48',
-    );
+    ];
 
     /**
      * {@inheritdoc}
      */
-    public function getUserInformation(array $accessToken, array $extraParameters = array())
+    public function getUserInformation(array $accessToken, array $extraParameters = [])
     {
-        $parameters = array_merge(array(
+        $parameters = array_merge([
             'oauth_consumer_key' => $this->options['client_id'],
             'oauth_timestamp' => time(),
-            'oauth_nonce' => $this->generateNonce(),
+            'oauth_nonce' => NonceGenerator::generate(),
             'oauth_version' => '1.0',
             'oauth_signature_method' => $this->options['signature_method'],
             'oauth_token' => $accessToken['oauth_token'],
-        ), $extraParameters);
+        ], $extraParameters);
 
         $parameters['oauth_signature'] = OAuthUtils::signRequest(
             'GET',
@@ -59,10 +60,10 @@ class JiraResourceOwner extends GenericOAuth1ResourceOwner
         );
 
         $content = $this->getResponseContent($this->doGetUserInformationRequest($this->options['infos_session_url'], $parameters));
-        $url = $this->normalizeUrl($this->options['infos_url'], array('username' => $content['name']));
+        $url = $this->normalizeUrl($this->options['infos_url'], ['username' => $content['name']]);
 
         // Regenerate nonce & signature as URL was changed
-        $parameters['oauth_nonce'] = $this->generateNonce();
+        $parameters['oauth_nonce'] = NonceGenerator::generate();
         $parameters['oauth_signature'] = OAuthUtils::signRequest(
             'GET',
             $url,
@@ -89,7 +90,7 @@ class JiraResourceOwner extends GenericOAuth1ResourceOwner
     {
         parent::configureOptions($resolver);
 
-        $resolver->setDefaults(array(
+        $resolver->setDefaults([
             'authorization_url' => '{base_url}/plugins/servlet/oauth/authorize',
             'request_token_url' => '{base_url}/plugins/servlet/oauth/request-token',
             'access_token_url' => '{base_url}/plugins/servlet/oauth/access-token',
@@ -99,11 +100,11 @@ class JiraResourceOwner extends GenericOAuth1ResourceOwner
             'infos_url' => '{base_url}/rest/api/2/user',
 
             'signature_method' => 'RSA-SHA1',
-        ));
+        ]);
 
-        $resolver->setRequired(array(
+        $resolver->setRequired([
             'base_url',
-        ));
+        ]);
 
         $normalizer = function (Options $options, $value) {
             return str_replace('{base_url}', $options['base_url'], $value);

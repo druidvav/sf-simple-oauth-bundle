@@ -3,7 +3,7 @@
 /*
  * This file is part of the HWIOAuthBundle package.
  *
- * (c) Hardware.Info <opensource@hardware.info>
+ * (c) Hardware Info <opensource@hardware.info>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -34,7 +34,7 @@ interface ResourceOwnerInterface
      *
      * @return UserResponseInterface the wrapped response interface
      */
-    public function getUserInformation(array $accessToken, array $extraParameters = array());
+    public function getUserInformation(array $accessToken, array $extraParameters = []);
 
     /**
      * Returns the provider's authorization url.
@@ -44,7 +44,7 @@ interface ResourceOwnerInterface
      *
      * @return string The authorization url
      */
-    public function getAuthorizationUrl($redirectUri, array $extraParameters = array());
+    public function getAuthorizationUrl($redirectUri, array $extraParameters = []);
 
     /**
      * Retrieve an access token for a given code.
@@ -57,7 +57,7 @@ interface ResourceOwnerInterface
      *
      * @return array The access token
      */
-    public function getAccessToken(HttpRequest $request, $redirectUri, array $extraParameters = array());
+    public function getAccessToken(HttpRequest $request, $redirectUri, array $extraParameters = []);
 
     /**
      * Check whatever CSRF token from request is valid or not.
@@ -116,4 +116,20 @@ interface ResourceOwnerInterface
      * @param array  $extraParameters An array of parameters to add to the url
      */
     public function refreshAccessToken($refreshToken, array $extraParameters = []);
+
+    /**
+     * @return StateInterface
+     */
+    public function getState(): StateInterface;
+
+    /**
+     * @param StateInterface|null $state
+     */
+    public function storeState(StateInterface $state = null);
+
+    /**
+     * @param string $key
+     * @param string $value
+     */
+    public function addStateParameter(string $key, string $value): void;
 }
