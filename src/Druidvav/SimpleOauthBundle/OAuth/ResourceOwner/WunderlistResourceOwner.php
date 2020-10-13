@@ -11,7 +11,7 @@
 
 namespace Druidvav\SimpleOauthBundle\OAuth\ResourceOwner;
 
-use Druidvav\SimpleOauthBundle\Security\Core\Authentication\Token\OAuthToken;
+use Druidvav\SimpleOauthBundle\OAuth\OAuthToken;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
