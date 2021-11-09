@@ -14,6 +14,9 @@ namespace Druidvav\SimpleOauthBundle\OAuth\ResourceOwner;
 use Druidvav\SimpleOauthBundle\OAuth\OAuthToken;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
+/**
+ * @final since 1.4
+ */
 class SinaWeiboResourceOwner extends GenericOAuth2ResourceOwner
 {
     /**
