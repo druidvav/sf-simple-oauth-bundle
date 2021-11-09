@@ -21,6 +21,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  *
  * @author Geoffrey Bachelet <geoffrey.bachelet@gmail.com>
  * @author Josip Letica <leticajosip.09@gmail.com>
+ *
+ * @final since 1.4
  */
 class AppleResourceOwner extends GenericOAuth2ResourceOwner
 {
@@ -90,7 +92,7 @@ class AppleResourceOwner extends GenericOAuth2ResourceOwner
         $user_info = $request->request->get('user');
         $user_info = json_decode($user_info, true);
 
-        if (null !== $user_info) {
+        if (null !== $user_info && isset($user_info['name'])) {
             $response['firstName'] = $user_info['name']['firstName'];
             $response['lastName'] = $user_info['name']['lastName'];
         }
