@@ -4,6 +4,7 @@ namespace Druidvav\SimpleOauthBundle\DependencyInjection;
 
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -19,23 +20,33 @@ class DvSimpleOauthExtension extends Extension
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $this->enableServices($config['services'], $config, $container);
-
         $definition = new Definition('GuzzleHttp\\Client');
         $definition->addArgument([ 'timeout' => 10 ]);
         $container->setDefinition('dv.oauth.guzzle', $definition);
 
-        $definition = new Definition('Druidvav\SimpleOauthBundle\Service\OAuthService');
-        $definition->addMethodCall('setContainer', [ new Reference('service_container') ]);
-        $container->setDefinition('dv.oauth', $definition);
-
         $definition = new Definition('Druidvav\SimpleOauthBundle\OAuth\RequestDataStorage\SessionStorage');
         $definition->addArgument(new Reference('session'));
         $container->setDefinition('dv.oauth.storage.session', $definition);
+
+        $serviceIds = $this->enableServices($config['services'], $config, $container);
+
+        $locatorServices = [];
+        foreach ($serviceIds as $id) {
+            $locatorServices[$id] = new Reference('dv.oauth.service.' . $id);
+        }
+
+        $locatorDefinition = new Definition(ServiceLocator::class, [$locatorServices]);
+        $locatorDefinition->addTag('container.service_locator');
+        $container->setDefinition('dv.oauth.service_locator', $locatorDefinition);
+
+        $definition = new Definition('Druidvav\SimpleOauthBundle\Service\OAuthService');
+        $definition->addArgument(new Reference('dv.oauth.service_locator'));
+        $container->setDefinition('dv.oauth', $definition);
     }
 
     private function enableServices($config, $globalConfig, ContainerBuilder $container)
     {
+        $serviceIds = [];
         foreach ($config as $id => $serviceConfig) {
             $className = 'Druidvav\\SimpleOauthBundle\\OAuth\\ResourceOwner\\' . ucfirst($serviceConfig['resource_owner']) . 'ResourceOwner';
 
@@ -54,6 +65,9 @@ class DvSimpleOauthExtension extends Extension
             $definition->addMethodCall('setUrlGenerator', [ new Reference('router') ]);
             $definition->addMethodCall('setRedirectUriRoute', [ $globalConfig['redirect_uri_route'] ]);
             $container->setDefinition('dv.oauth.service.' . $id, $definition);
+
+            $serviceIds[] = $id;
         }
+        return $serviceIds;
     }
 }
