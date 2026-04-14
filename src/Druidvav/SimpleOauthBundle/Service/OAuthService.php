@@ -3,12 +3,17 @@ namespace Druidvav\SimpleOauthBundle\Service;
 
 use Druidvav\SimpleOauthBundle\Exception\ServiceNotFoundException;
 use Druidvav\SimpleOauthBundle\Service;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
+use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 class OAuthService
 {
-    use ContainerAwareTrait;
+    private $serviceLocator;
+
+    public function __construct(ContainerInterface $serviceLocator)
+    {
+        $this->serviceLocator = $serviceLocator;
+    }
 
     /**
      * @param $id
@@ -17,11 +22,10 @@ class OAuthService
      */
     public function getService($id)
     {
-        if (!$this->container->has('dv.oauth.service.' . $id)) {
+        if (!$this->serviceLocator->has($id)) {
             throw new ServiceNotFoundException();
         }
-        $service = $this->container->get('dv.oauth.service.' . $id);
-        return $service;
+        return $this->serviceLocator->get($id);
     }
 
     /**

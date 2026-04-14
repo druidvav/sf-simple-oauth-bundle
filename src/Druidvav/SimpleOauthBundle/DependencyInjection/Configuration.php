@@ -13,8 +13,14 @@ class Configuration implements ConfigurationInterface
      */
     public function getConfigTreeBuilder()
     {
-        $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('dv_simple_oauth');
+        if (method_exists(TreeBuilder::class, 'getRootNode')) {
+            $treeBuilder = new TreeBuilder('dv_simple_oauth');
+            $rootNode = $treeBuilder->getRootNode();
+        } else {
+            $treeBuilder = new TreeBuilder();
+            $rootNode = $treeBuilder->root('dv_simple_oauth');
+        }
+
         $rootNode
             ->children()
                 ->scalarNode('redirect_uri_route')
@@ -33,8 +39,14 @@ class Configuration implements ConfigurationInterface
      */
     private function addServicesSection()
     {
-        $tree = new TreeBuilder();
-        $node = $tree->root('services');
+        if (method_exists(TreeBuilder::class, 'getRootNode')) {
+            $tree = new TreeBuilder('services');
+            $node = $tree->getRootNode();
+        } else {
+            $tree = new TreeBuilder();
+            $node = $tree->root('services');
+        }
+
         $node
             ->requiresAtLeastOneElement()
             ->prototype('array')
