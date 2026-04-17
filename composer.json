@@ -8,10 +8,10 @@
   },
   "require": {
     "ext-json": "*",
-    "symfony/framework-bundle": "^3.3|^4.0",
-    "symfony/security": "^3.3|^4.0",
-    "symfony/options-resolver": "^3.3|^4.0",
-    "symfony/property-access": "^3.3|^4.0",
+    "symfony/framework-bundle": "^3.4|^4.4|^5.0",
+    "symfony/security-bundle": "^3.4|^4.4|^5.0",
+    "symfony/options-resolver": "^3.4|^4.4|^5.0",
+    "symfony/property-access": "^3.4|^4.4|^5.0",
     "guzzlehttp/guzzle": "^6.0|^7.0"
   }
 }
