@@ -8,18 +8,10 @@ use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 
 class Configuration implements ConfigurationInterface
 {
-    /**
-     * @return TreeBuilder The tree builder
-     */
-    public function getConfigTreeBuilder()
+    public function getConfigTreeBuilder(): TreeBuilder
     {
-        if (method_exists(TreeBuilder::class, 'getRootNode')) {
-            $treeBuilder = new TreeBuilder('dv_simple_oauth');
-            $rootNode = $treeBuilder->getRootNode();
-        } else {
-            $treeBuilder = new TreeBuilder();
-            $rootNode = $treeBuilder->root('dv_simple_oauth');
-        }
+        $treeBuilder = new TreeBuilder('dv_simple_oauth');
+        $rootNode = $treeBuilder->getRootNode();
 
         $rootNode
             ->children()
@@ -34,18 +26,10 @@ class Configuration implements ConfigurationInterface
         return $treeBuilder;
     }
 
-    /**
-     * @return ArrayNodeDefinition
-     */
-    private function addServicesSection()
+    private function addServicesSection(): ArrayNodeDefinition
     {
-        if (method_exists(TreeBuilder::class, 'getRootNode')) {
-            $tree = new TreeBuilder('services');
-            $node = $tree->getRootNode();
-        } else {
-            $tree = new TreeBuilder();
-            $node = $tree->root('services');
-        }
+        $tree = new TreeBuilder('services');
+        $node = $tree->getRootNode();
 
         $node
             ->requiresAtLeastOneElement()

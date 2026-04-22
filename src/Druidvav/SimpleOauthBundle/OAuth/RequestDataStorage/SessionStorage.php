@@ -13,6 +13,7 @@ namespace Druidvav\SimpleOauthBundle\OAuth\RequestDataStorage;
 
 use Druidvav\SimpleOauthBundle\OAuth\RequestDataStorageInterface;
 use Druidvav\SimpleOauthBundle\OAuth\ResourceOwnerInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
@@ -29,12 +30,9 @@ class SessionStorage implements RequestDataStorageInterface
      */
     private $session;
 
-    /**
-     * @param SessionInterface $session
-     */
-    public function __construct(SessionInterface $session)
+    public function __construct(RequestStack $requestStack)
     {
-        $this->session = $session;
+        $this->session = $requestStack->getSession();
     }
 
     /**
@@ -47,7 +45,6 @@ class SessionStorage implements RequestDataStorageInterface
             throw new \InvalidArgumentException('No data available in storage.');
         }
 
-        // request tokens are one time use only
         if (\in_array($type, ['token', 'csrf_state'])) {
             $this->session->remove($key);
         }

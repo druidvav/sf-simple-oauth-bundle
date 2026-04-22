@@ -29,7 +29,7 @@ class DvSimpleOauthExtension extends Extension
         $container->setDefinition('dv.oauth.guzzle', $definition);
 
         $definition = new Definition(SessionStorage::class);
-        $definition->addArgument(new Reference('session'));
+        $definition->addArgument(new Reference('request_stack'));
         $container->setDefinition('dv.oauth.storage.session', $definition);
 
         $serviceIds = $this->enableServices($config['services'], $config, $container);
