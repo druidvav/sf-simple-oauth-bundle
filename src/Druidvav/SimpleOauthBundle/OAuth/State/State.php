@@ -117,24 +117,28 @@ final class State implements StateInterface
         return '' !== $encoded ? $encoded : null;
     }
 
-    public function serialize(): ?string
+    /**
+     * @return array<string, string>
+     */
+    public function __serialize(): array
     {
-        return serialize($this->values);
-    }
-
-    public function unserialize($serialized): void
-    {
-        $this->values = unserialize($serialized);
+        return $this->values;
     }
 
     /**
-     * @param string $queryParameter The state query parameter string
-     *
+     * @param array<string, mixed> $data
+     */
+    public function __unserialize(array $data): void
+    {
+        $this->values = $data;
+    }
+
+    /***
      * @return array<string,string>|null
      */
     private function parseStringParameter(?string $queryParameter = null): ?array
     {
-        $urlDecoded = urldecode($queryParameter);
+        $urlDecoded = urldecode($queryParameter ?? '');
         $values = json_decode(base64_decode($urlDecoded), true);
 
         if (null === $values && '' !== $urlDecoded) {

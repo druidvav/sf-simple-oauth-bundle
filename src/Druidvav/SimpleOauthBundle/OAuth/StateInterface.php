@@ -14,7 +14,7 @@ namespace Druidvav\SimpleOauthBundle\OAuth;
 use Druidvav\SimpleOauthBundle\OAuth\Exception\StateRetrievalException;
 use Symfony\Component\Config\Definition\Exception\DuplicateKeyException;
 
-interface StateInterface extends \Serializable
+interface StateInterface
 {
     /**
      * @param string $key   The key to store a value to
