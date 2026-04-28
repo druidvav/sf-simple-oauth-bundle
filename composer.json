@@ -9,10 +9,9 @@
   "require": {
     "php": "^7.4 || ^8.0",
     "ext-json": "*",
-    "symfony/framework-bundle": "^5.4",
+    "symfony/framework-bundle": "^5.4|^6.4",
     "symfony/security-bundle": "^5.4|^6.0",
-    "symfony/options-resolver": "^5.4",
-    "symfony/property-access": "^5.4",
+    "symfony/options-resolver": "^5.4|^6.4",
     "guzzlehttp/guzzle": "^6.0|^7.0"
   }
 }
