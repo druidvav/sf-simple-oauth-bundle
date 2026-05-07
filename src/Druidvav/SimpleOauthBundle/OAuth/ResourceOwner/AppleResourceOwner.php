@@ -79,7 +79,7 @@ class AppleResourceOwner extends GenericOAuth2ResourceOwner
         OAuthErrorHandler::handleOAuthError($request);
 
         $parameters = array_merge([
-            'code' => $request->request->get('code'),
+            'code' => $request->query->get('code'),
             'grant_type' => 'authorization_code',
             'client_id' => $this->options['client_id'],
             'client_secret' => $this->options['client_secret'],
@@ -89,7 +89,7 @@ class AppleResourceOwner extends GenericOAuth2ResourceOwner
         $response = $this->doGetTokenRequest($this->options['access_token_url'], $parameters);
         $response = $this->getResponseContent($response);
         $this->validateResponseContent($response);
-        $user_info = $request->request->get('user');
+        $user_info = $request->query->get('user');
         $user_info = json_decode($user_info, true);
 
         if (null !== $user_info && isset($user_info['name'])) {

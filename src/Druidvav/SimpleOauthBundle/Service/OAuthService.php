@@ -35,7 +35,7 @@ class OAuthService
      */
     public function getServiceByRequest(Request $request)
     {
-        $service = $this->getService($request->get('service'));
+        $service = $this->getService($request->query->get('service'));
         if (!$service->getResourceOwner()->handles($request)) {
             throw new ServiceNotFoundException();
         }
