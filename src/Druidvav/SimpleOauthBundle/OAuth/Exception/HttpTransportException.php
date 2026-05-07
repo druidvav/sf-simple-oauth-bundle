@@ -11,13 +11,14 @@
 
 namespace Druidvav\SimpleOauthBundle\OAuth\Exception;
 
+use Exception;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 
 class HttpTransportException extends AuthenticationException
 {
     private $ownerName;
 
-    public function __construct($message, $ownerName, $code = 0, \Exception $previous = null)
+    public function __construct($message, $ownerName, $code = 0, ?Exception $previous = null)
     {
         parent::__construct($message, $code, $previous);
         $this->ownerName = $ownerName;

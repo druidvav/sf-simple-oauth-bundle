@@ -117,15 +117,9 @@ interface ResourceOwnerInterface
      */
     public function refreshAccessToken($refreshToken, array $extraParameters = []);
 
-    /**
-     * @return StateInterface
-     */
     public function getState(): StateInterface;
 
-    /**
-     * @param StateInterface|null $state
-     */
-    public function storeState(StateInterface $state = null);
+    public function storeState(?StateInterface $state = null);
 
     /**
      * @param string $key
