@@ -8,15 +8,13 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 class Service
 {
     protected $id;
+    protected $title;
 
-    /* @var string $urlGenerator */
-    protected $redirectUriRoute;
+    protected string $redirectUriRoute;
 
-    /* @var UrlGeneratorInterface $urlGenerator */
-    protected $urlGenerator;
+    protected UrlGeneratorInterface $urlGenerator;
 
-    /* @var ResourceOwnerInterface $urlGenerator */
-    protected $resourceOwner;
+    protected ResourceOwnerInterface $resourceOwner;
 
     public function __construct($id, $title, ResourceOwnerInterface $resourceOwner)
     {
@@ -45,10 +43,7 @@ class Service
         return $this->title;
     }
 
-    /**
-     * @return ResourceOwnerInterface
-     */
-    public function getResourceOwner()
+    public function getResourceOwner(): ResourceOwnerInterface
     {
         return $this->resourceOwner;
     }
@@ -58,7 +53,7 @@ class Service
         return $this->urlGenerator->generate($this->redirectUriRoute, [ 'service' => $this->id ], UrlGeneratorInterface::ABSOLUTE_URL);
     }
 
-    public function getAuthorizationUrl(array $extraParameters = array())
+    public function getAuthorizationUrl(array $extraParameters = array()): string
     {
         return $this->resourceOwner->getAuthorizationUrl($this->getRedirectUri(), $extraParameters);
     }
