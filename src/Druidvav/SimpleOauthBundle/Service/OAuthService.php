@@ -16,26 +16,38 @@ class OAuthService
     }
 
     /**
-     * @param $id
-     * @return Service|object
+     * @param string $id
+     * @return Service
      * @throws ServiceNotFoundException
      */
-    public function getService($id)
+    public function getService(string $id): Service
     {
         if (!$this->serviceLocator->has($id)) {
             throw new ServiceNotFoundException();
         }
-        return $this->serviceLocator->get($id);
+        $service = $this->serviceLocator->get($id);
+        if (!$service instanceof Service) {
+            throw new ServiceNotFoundException();
+        }
+        return $service;
     }
 
     /**
      * @param Request $request
-     * @return Service|object
+     * @return Service
      * @throws ServiceNotFoundException
      */
-    public function getServiceByRequest(Request $request)
+    public function getServiceByRequest(Request $request): Service
     {
-        $service = $this->getService($request->query->get('service'));
+        $serviceId = $request->attributes->get('service');
+        if (null === $serviceId) {
+            $serviceId = $request->query->get('service');
+        }
+        if (null === $serviceId) {
+            throw new ServiceNotFoundException();
+        }
+
+        $service = $this->getService($serviceId);
         if (!$service->getResourceOwner()->handles($request)) {
             throw new ServiceNotFoundException();
         }
